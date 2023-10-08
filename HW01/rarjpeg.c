@@ -65,37 +65,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    /* print results of checking file */
-    if (israrjpeg) {
-        print_archive(file_size, buffer);
-    }
-    else {
-        printf("This file does not include an archive\n");
-    }
-
-
-    exit(EXIT_SUCCESS);
-
-}
-
-int get_filename_from_archive(size_t ii, const unsigned char buffer[], unsigned char** filename)
-{
-    size_t filename_size = buffer[ii+FILENAME_SIZE_SHIFT + 1] << 8 | buffer[ii+FILENAME_SIZE_SHIFT];
-    *filename = (unsigned char*) malloc(filename_size * sizeof(unsigned char));
-    if (*filename == NULL) {
-        fprintf(stderr, "Error during malloc\n");
-        free(buffer);
-        buffer = NULL;
-        exit(EXIT_FAILURE);
-    }
-    for (size_t i = 0; i < filename_size; i++) {
-        (*filename)[i] = buffer[ii+FILENAME_SHIFT + i];
-    }
-
-
-    return filename_size;
-}
-
+/* print help */
 void print_help(void)
 {
     fprintf(stdout, "Usage: rarjpeg FILE\n"
@@ -104,6 +74,7 @@ void print_help(void)
             );
 }
 
+/* raise error if argc mismatch */
 void argc_mismatch(void)
 {
     fprintf(stderr, "rarjpeg: missing operand\n"
@@ -111,7 +82,7 @@ void argc_mismatch(void)
             );
 }
 
-void print_archive(size_t file_size, char buffer[])
+/* print archive content */
 {
     unsigned char* filename;
     const unsigned char FILE_SIGN[4] = {0x50, 0x4b, 0x03, 0x04};
@@ -138,16 +109,19 @@ void print_archive(size_t file_size, char buffer[])
     }
 }
 
-char* args_process(const int argc, const char* argv[])
+/* process args from user */
 {
     if (argc < 2) {
+        // error
         argc_mismatch();
         exit(EXIT_FAILURE);
     }
     else if (!strcmp(argv[1], "--help")) {
+        // print help
         print_help();
         exit(EXIT_SUCCESS);
     }
     
+    // success launch
     return argv[1];
 }
