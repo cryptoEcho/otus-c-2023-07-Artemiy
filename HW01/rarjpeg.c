@@ -8,16 +8,58 @@
 
 void argc_mismatch(void);
 void print_help(void);
-int get_filename_from_archive(size_t ii, const unsigned char buffer[], unsigned char** filename);
-void print_archive(size_t file_size, char buffer[]);
-char* args_process(const int argc, const char* argv[]);
+size_t read_given_file(const char* filename, unsigned char** buffer);
+int get_filename_from_archive(size_t ii, unsigned char buffer[], unsigned char** filename);
+void print_archive(size_t file_size, unsigned char buffer[]);
+char* args_process(const int argc, char** argv);
+char is_file_rarjpeg(size_t file_size, unsigned char buffer[]);
 
 
-int main(int argc, char* argv[])
+int main(int argc, char** argv)
 {
     /* filename input */
-    unsigned char* filename = args_process(argc, argv);
+    char* filename = args_process(argc, argv);
         
+    /* read the file */
+    unsigned char* buffer;
+    size_t file_size = read_given_file(filename, &buffer);
+
+    /* file analysis */
+    char israrjpeg = is_file_rarjpeg(file_size, buffer);
+
+    /* print results of checking file */
+    if (israrjpeg) {
+        print_archive(file_size, buffer);
+    }
+    else {
+        printf("This file does not include an archive\n");
+    }
+
+    free(buffer);
+    exit(EXIT_SUCCESS);
+}
+
+/* get the name of a file from archive */
+int get_filename_from_archive(size_t ii, unsigned char buffer[], unsigned char** filename)
+{
+    size_t filename_size = buffer[ii+FILENAME_SIZE_SHIFT + 1] << 8 | buffer[ii+FILENAME_SIZE_SHIFT];
+    *filename = (unsigned char*) malloc(filename_size * sizeof(unsigned char));
+    if (*filename == NULL) {
+        fprintf(stderr, "Error during malloc\n");
+        free(buffer);
+        buffer = NULL;
+        exit(EXIT_FAILURE);
+    }
+    for (size_t i = 0; i < filename_size; i++) {
+        (*filename)[i] = buffer[ii+FILENAME_SHIFT + i];
+    }
+
+
+    return filename_size;
+}
+
+size_t read_given_file(const char* filename, unsigned char** buffer)
+{
     // open file
     FILE* fp = fopen(filename, "r");
     if (!fp) {
@@ -31,12 +73,12 @@ int main(int argc, char* argv[])
     rewind(fp);
 
     // allocate buffer and read the whole file
-    unsigned char* buffer = (unsigned char*) malloc(file_size * sizeof(char));
-    if (buffer == NULL) {
+    *buffer = (unsigned char*) malloc(file_size * sizeof(char));
+    if (*buffer == NULL) {
         fprintf(stderr, "Error during malloc\n");
         exit(EXIT_FAILURE);
     }
-    const size_t ret_code = fread(buffer, sizeof(char), file_size, fp);
+    const size_t ret_code = fread(*buffer, sizeof(char), file_size, fp);
     // handle errors
     if (ret_code == file_size) {
         // printf("file was read successfully. File size is %d bytes\n", file_size);
@@ -48,9 +90,13 @@ int main(int argc, char* argv[])
             perror("Error reading test.bin");
     }
 
-    /* file analysis */
+    fclose(fp);
+    return file_size;
+}
+
+char is_file_rarjpeg(size_t file_size, unsigned char buffer[])
+{
     const unsigned char ZIP_SIGN[2] = {0x50, 0x4b};
-    char israrjpeg = 0;
     for (size_t i = 0; i < file_size; i++) {
         /*  ZIP SIGNATURES:
             0x50 0x4b 0x01 0x02 - central dir
@@ -59,11 +105,14 @@ int main(int argc, char* argv[])
         */
         if ( (buffer[i] == ZIP_SIGN[0]) && (buffer[i+1] == ZIP_SIGN[1]) ) {
             if ( (buffer[i+2]) < 7 && (buffer[i+3] < 7) ) {
-                israrjpeg = 1;
+                return 1;
                 break;
             }
         }
     }
+
+    return 0;
+}
 
 /* print help */
 void print_help(void)
@@ -83,6 +132,7 @@ void argc_mismatch(void)
 }
 
 /* print archive content */
+void print_archive(size_t file_size, unsigned char buffer[])
 {
     unsigned char* filename;
     const unsigned char FILE_SIGN[4] = {0x50, 0x4b, 0x03, 0x04};
@@ -104,12 +154,14 @@ void argc_mismatch(void)
                     printf("%c", filename[j]);
                 }
                 printf("\n");
+                free(filename);
             }
         }
     }
 }
 
 /* process args from user */
+char* args_process(const int argc, char** argv)
 {
     if (argc < 2) {
         // error
@@ -125,3 +177,17 @@ void argc_mismatch(void)
     // success launch
     return argv[1];
 }
+
+// void handle_errors(char** buffer, char** filename)
+// {
+//     if (errno) {
+//         if (*buffer != NULL) {
+//             free (*buffer);
+//             *buffer = NULL;
+//         }
+//         if (*filename != NULL) {
+//             free (*filename);
+//             *filename = NULL;
+//         }
+//     }
+// }
