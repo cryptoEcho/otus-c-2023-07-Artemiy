@@ -1,7 +1,10 @@
+// I want to use strnlen function
 #define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
+// we must use it to set proper locale (C.UTF-8) for an user
 #include <locale.h>
 #include <string.h>
 #include "utils.h"
@@ -9,8 +12,6 @@
 // processing cli arguments
 void cli_args(int argc, char** argv, char** pinput_filename, char** poutput_filename);
 wchar_t convert_to_utf8(unsigned char symbol);
-
-
 
 int main(int argc, char** argv)
 {
