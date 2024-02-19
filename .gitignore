@@ -5,5 +5,8 @@
 # Unignore all dirs
 !*/
 
+# Unignore Makefile in any directory
+!Makefile
+
 # Ignore vscode dir
 .vscode
